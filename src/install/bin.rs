@@ -739,7 +739,24 @@ pub(crate) fn normalized_bin_name(name: &[u8]) -> &[u8] {
         return b"";
     }
 
+    // Reject bin names that shadow system commands to prevent PATH poisoning
+    // during lifecycle script execution (GHSA-xxxx-xxxx-xxxx).
+    if is_reserved_system_bin_name(name) {
+        return b"";
+    }
+
     name
+}
+
+const RESERVED_SYSTEM_BIN_NAMES: &[&[u8]] = &[
+    b"node", b"sh", b"bash", b"make", b"gcc", b"g++", b"cc",
+    b"python", b"python3", b"curl", b"wget", b"git", b"npm", b"npx",
+];
+
+fn is_reserved_system_bin_name(name: &[u8]) -> bool {
+    RESERVED_SYSTEM_BIN_NAMES
+        .iter()
+        .any(|reserved| strings::eql(*reserved, name))
 }
 
 /// True when a `bin` entry's target value would resolve outside the package
